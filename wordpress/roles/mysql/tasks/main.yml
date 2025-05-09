@@ -17,4 +17,3 @@
       - name: "{{ docker_network }}"
     volumes:
       - "{{ mysql_volume }}:/var/lib/mysql"
-      

@@ -9,6 +9,7 @@ mysql_user: wp_user
 mysql_password: wp_password
 mysql_volume: mysql_data
 mysql_slave_container_name: mysql_slave
+mysql_slave_volume: mysql_slave_data
 
 wordpress_container_name: wordpress
 wordpress_image: wordpress:latest
