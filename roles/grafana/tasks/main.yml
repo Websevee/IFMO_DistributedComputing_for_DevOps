@@ -1,0 +1,16 @@
+---
+- name: Ensure Docker network exists
+  community.docker.docker_network:
+    name: monitoring_network
+    state: present
+
+- name: Run Grafana container
+  community.docker.docker_container:
+    name: grafana
+    image: grafana/grafana:latest
+    state: started
+    restart_policy: always
+    ports:
+      - "3000:3000"
+    networks:
+      - name: monitoring_network

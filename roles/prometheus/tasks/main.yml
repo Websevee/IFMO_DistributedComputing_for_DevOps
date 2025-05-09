@@ -1,0 +1,33 @@
+---
+- name: Configure MySQL Master in container
+  when: inventory_hostname == "prometheus"
+  block:
+    - name: Run MySQL Master container with replication configuration
+      community.docker.docker_container:
+        name: "prometheus"
+        image: "bitnami/prometheus"
+        state: started
+        restart_policy: always
+        networks:
+          - name: "{{ docker_network }}"
+        published_ports:
+          - "9090:9090"
+        volumes:
+          - "{{ prometheus_volume }}:/etc/prometheus"
+        # ports:
+        #   - "{{ wordpress_port }}"
+        # volumes:
+        #   - "{{ wordpress_volume }}:/var/www/html"
+        # name: "{{ mysql_container_name }}"
+        # image: "{{ mysql_image }}"
+        # state: started
+        # restart_policy: always
+        # env:
+        #   MYSQL_ROOT_PASSWORD: "{{ mysql_root_password }}"
+        # networks:
+        #   - name: "{{ docker_network }}"
+        # published_ports:
+        #   - "3306:3306"
+        # volumes:
+        #   - "{{ mysql_volume }}:/var/lib/mysql"
+        #   - "/tmp/replication.cnf:/etc/mysql/conf.d/replication.cnf"
