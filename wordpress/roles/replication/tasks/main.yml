@@ -6,6 +6,7 @@
       ansible.builtin.copy:
         src: "{{ role_path }}/files/replication-master.cnf"
         dest: "/tmp/replication.cnf"
+        mode: "0644"
 
     - name: Run MySQL Master container with replication configuration
       community.docker.docker_container:
@@ -24,7 +25,7 @@
           - "/tmp/replication.cnf:/etc/mysql/conf.d/replication.cnf"
 
     - name: Wait for MySQL to be ready on Master
-      wait_for:
+      ansible.builtin.wait_for:
         host: 127.0.0.1
         port: 3306
         timeout: 300
@@ -49,6 +50,7 @@
       ansible.builtin.copy:
         src: "{{ role_path }}/files/replication-slave.cnf"
         dest: "/tmp/replication.cnf"
+        mode: "0644"
 
     - name: Run MySQL Slave container with replication configuration
       community.docker.docker_container:
@@ -67,7 +69,7 @@
           - "/tmp/replication.cnf:/etc/mysql/conf.d/replication.cnf"
 
     - name: Wait for MySQL to be ready on Slave
-      wait_for:
+      ansible.builtin.wait_for:
         host: 127.0.0.1
         port: 3307
         timeout: 300
