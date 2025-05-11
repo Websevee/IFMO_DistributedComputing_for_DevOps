@@ -108,7 +108,7 @@
         login_user: "root"
         login_password: "{{ mysql_root_password }}"
         mode: stopreplica
-      when: replication_status.Is_Replica == true
+      when: replication_status.Is_Replica
 
     - name: Install MySQL client tools on Slave
       ansible.builtin.package:
@@ -142,7 +142,7 @@
         login_user: "root"
         login_password: "{{ mysql_root_password }}"
         mode: resetreplicaall
-      when: replication_status.Is_Replica == true
+      when: replication_status.Is_Replica
 
     - name: Configure replication on Slave
       community.mysql.mysql_replication:
