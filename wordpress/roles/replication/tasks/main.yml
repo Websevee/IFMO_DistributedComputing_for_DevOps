@@ -5,7 +5,7 @@
     - name: Copy config to target
       ansible.builtin.copy:
         src: "{{ role_path }}/files/replication-master.cnf"
-        dest: "/tmp/replication.cnf"
+        dest: "/replication-master.cnf"
         mode: "0644"
 
     - name: Run MySQL Master container with replication configuration
@@ -22,7 +22,7 @@
           - "3306:3306"
         volumes:
           - "{{ mysql_volume }}:/var/lib/mysql"
-          - "/tmp/replication.cnf:/etc/mysql/conf.d/replication.cnf"
+          - "/replication-master.cnf:/etc/mysql/conf.d/replication.cnf"
 
     - name: Wait for MySQL to be ready on Master
       ansible.builtin.wait_for:
@@ -43,13 +43,22 @@
         priv: "*.*:REPLICATION SLAVE"
         state: present
 
+- name: Get Master status
+  block:
+    - name: Get primary binlog file name and binlog position
+      community.mysql.mysql_replication:
+        mode: getprimary
+        login_user: "root"
+        login_password: "{{ mysql_root_password }}"
+      register: primary_status
+
 - name: Configure MySQL Slave in container
   when: inventory_hostname == "slave"
   block:
     - name: Copy config to target
       ansible.builtin.copy:
         src: "{{ role_path }}/files/replication-slave.cnf"
-        dest: "/tmp/replication.cnf"
+        dest: "/replication-slave.cnf"
         mode: "0644"
 
     - name: Run MySQL Slave container with replication configuration
@@ -66,25 +75,95 @@
           - "3307:3306"
         volumes:
           - "{{ mysql_slave_volume }}:/var/lib/mysql"
-          - "/tmp/replication.cnf:/etc/mysql/conf.d/replication.cnf"
+          - "/replication-slave.cnf:/etc/mysql/conf.d/replication.cnf"
 
     - name: Wait for MySQL to be ready on Slave
-      ansible.builtin.wait_for:
-        host: 127.0.0.1
-        port: 3307
-        timeout: 300
-        state: started
-        delay: 10
+      community.mysql.mysql_info:
+        login_host: "127.0.0.1"
+        login_port: 3307
+        login_user: "root"
+        login_password: "{{ mysql_root_password }}"
+      register: mysql_ready
+      retries: 10
+      delay: 5
+      until: mysql_ready is succeeded
 
-    - name: Configure replication on Slave
+    - name: Check replication status on Slave
+      community.mysql.mysql_replication:
+        mode: getreplica
+        login_host: "127.0.0.1"
+        login_port: 3307
+        login_user: "root"
+        login_password: "{{ mysql_root_password }}"
+      register: replication_status
+
+    - name: Debug master status
+      ansible.builtin.debug:
+        var: replication_status
+
+    - name: Stop Slave IO thread
       community.mysql.mysql_replication:
         login_host: "127.0.0.1"
         login_port: 3307
         login_user: "root"
         login_password: "{{ mysql_root_password }}"
+        mode: stopreplica
+      when: replication_status.Is_Replica == true
+
+    - name: Install MySQL client tools on Slave
+      ansible.builtin.package:
+        name: mysql-client
+        state: present
+
+    - name: Dump WordPress database schema from Master
+      community.mysql.mysql_db:
+        login_host: "127.0.0.1"
+        login_port: 3306
+        login_user: "root"
+        login_password: "{{ mysql_root_password }}"
+        name: wordpress
+        state: dump
+        target: /tmp/wordpress_schema.sql
+
+    - name: Import WordPress database schema on Slave
+      community.mysql.mysql_db:
+        login_host: "127.0.0.1"
+        login_port: 3307
+        login_user: "root"
+        login_password: "{{ mysql_root_password }}"
+        name: wordpress
+        state: import
+        target: /tmp/wordpress_schema.sql
+
+    - name: Reset Slave to clear relay logs
+      community.mysql.mysql_replication:
+        login_host: "127.0.0.1"
+        login_port: 3307
+        login_user: "root"
+        login_password: "{{ mysql_root_password }}"
+        mode: resetreplicaall
+      when: replication_status.Is_Replica == true
+
+    - name: Configure replication on Slave
+      community.mysql.mysql_replication:
         mode: changeprimary
+        login_host: "127.0.0.1"
+        login_port: 3307
+        login_user: "root"
+        login_password: "{{ mysql_root_password }}"
         primary_host: "{{ master_host }}"
         primary_user: "{{ replication_user }}"
         primary_password: "{{ replication_password }}"
-        primary_log_file: "{{ master_log_file }}"
-        primary_log_pos: "{{ master_log_pos }}"
+        primary_log_file: "{{ primary_status.File }}"
+        primary_log_pos: "{{ primary_status.Position | int }}"
+        primary_delay: 10 # для учебных целей 10 секунд
+        fail_on_error: true
+
+    - name: Start replication on Slave
+      community.mysql.mysql_replication:
+        login_host: "127.0.0.1"
+        login_port: 3307
+        login_user: "root"
+        login_password: "{{ mysql_root_password }}"
+        mode: startreplica
+        fail_on_error: true
