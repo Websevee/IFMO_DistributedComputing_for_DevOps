@@ -1,6 +1,6 @@
 ---
 - name: Set Replication
-  hosts: all
+  hosts: wordpress
   become: true
 
   roles:
