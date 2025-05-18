@@ -1,9 +1,4 @@
 ---
-- name: Ensure Docker network exists
-  community.docker.docker_network:
-    name: monitoring_network
-    state: present
-
 - name: Run Grafana container
   community.docker.docker_container:
     name: grafana
@@ -13,4 +8,4 @@
     ports:
       - "3000:3000"
     networks:
-      - name: monitoring_network
+      - name: "{{ docker_network }}"

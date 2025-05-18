@@ -1,0 +1,16 @@
+---
+- name: Run cAdvisor container
+  community.docker.docker_container:
+    name: cadvisor
+    image: gcr.io/cadvisor/cadvisor:latest
+    state: started
+    restart_policy: always
+    ports:
+      - "8080:8080"
+    networks:
+      - name: "{{ docker_network }}"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro

@@ -1,4 +1,4 @@
-prometheus_config_dir: /opt/prometheus
-
 grafana_admin_user: admin
 grafana_admin_password: admin
+
+prometheus_volume: prometheus_data

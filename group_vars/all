@@ -1,0 +1,2 @@
+docker_network: wordpress_network
+docker_users: [vboxuser]

@@ -1,33 +1,29 @@
 ---
-- name: Configure MySQL Master in container
-  when: inventory_hostname == "prometheus"
+- name: Configure Prometheus container
+  # This block ensures Prometheus is running in a Docker container
   block:
-    - name: Run MySQL Master container with replication configuration
+    - name: Create Prometheus data directory
+      file:
+        path: "/{{ prometheus_volume }}"
+        state: directory
+        mode: "0755"
+
+    - name: Copy Prometheus configuration
+      copy:
+        src: prometheus.yml
+        dest: "/{{ prometheus_volume }}/prometheus.yml"
+        mode: "0644"
+
+    - name: Run Prometheus container with configuration
       community.docker.docker_container:
         name: "prometheus"
         image: "bitnami/prometheus"
         state: started
         restart_policy: always
+        recreate: true
         networks:
           - name: "{{ docker_network }}"
         published_ports:
           - "9090:9090"
         volumes:
-          - "{{ prometheus_volume }}:/etc/prometheus"
-        # ports:
-        #   - "{{ wordpress_port }}"
-        # volumes:
-        #   - "{{ wordpress_volume }}:/var/www/html"
-        # name: "{{ mysql_container_name }}"
-        # image: "{{ mysql_image }}"
-        # state: started
-        # restart_policy: always
-        # env:
-        #   MYSQL_ROOT_PASSWORD: "{{ mysql_root_password }}"
-        # networks:
-        #   - name: "{{ docker_network }}"
-        # published_ports:
-        #   - "3306:3306"
-        # volumes:
-        #   - "{{ mysql_volume }}:/var/lib/mysql"
-        #   - "/tmp/replication.cnf:/etc/mysql/conf.d/replication.cnf"
+          - "/{{ prometheus_volume }}:/etc/prometheus"
