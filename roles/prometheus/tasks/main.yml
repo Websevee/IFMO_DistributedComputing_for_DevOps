@@ -3,13 +3,13 @@
   # This block ensures Prometheus is running in a Docker container
   block:
     - name: Create Prometheus data directory
-      file:
+      ansible.builtin.file:
         path: "/{{ prometheus_volume }}"
         state: directory
         mode: "0755"
 
     - name: Copy Prometheus configuration
-      copy:
+      ansible.builtin.copy:
         src: prometheus.yml
         dest: "/{{ prometheus_volume }}/prometheus.yml"
         mode: "0644"
@@ -21,6 +21,7 @@
         state: started
         restart_policy: always
         recreate: true
+        force_restart: true
         networks:
           - name: "{{ docker_network }}"
         published_ports:
