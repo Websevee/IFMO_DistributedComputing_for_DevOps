@@ -1,6 +1,6 @@
 ---
 - name: Install Docker, WordPress, MySQL
-  hosts: all
+  hosts: master
   become: true
 
   roles:

@@ -13,3 +13,5 @@
       - name: "{{ docker_network }}"
     ports:
       - "{{ wordpress_port }}"
+    volumes:
+      - "{{ wordpress_volume }}:/var/www/html"
