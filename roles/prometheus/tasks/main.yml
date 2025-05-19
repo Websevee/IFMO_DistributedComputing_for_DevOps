@@ -21,7 +21,6 @@
         state: started
         restart_policy: always
         recreate: true
-        force_restart: true
         networks:
           - name: "{{ docker_network }}"
         published_ports:
