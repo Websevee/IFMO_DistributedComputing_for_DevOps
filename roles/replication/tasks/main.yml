@@ -51,7 +51,7 @@
         login_host: "127.0.0.1"
         login_user: "root"
         login_password: "{{ mysql_root_password }}"
-      register: primary_status
+      register: replication_primary_status
 
 - name: Configure MySQL Slave in container
   when: inventory_hostname == "slave"
@@ -84,10 +84,10 @@
         login_port: 3307
         login_user: "root"
         login_password: "{{ mysql_root_password }}"
-      register: mysql_ready
+      register: replication_mysql_ready
       retries: 10
       delay: 5
-      until: mysql_ready is succeeded
+      until: replication_mysql_ready is succeeded
 
     - name: Check replication status on Slave
       community.mysql.mysql_replication:
@@ -155,8 +155,8 @@
         primary_host: "{{ master_host }}"
         primary_user: "{{ replication_user }}"
         primary_password: "{{ replication_password }}"
-        primary_log_file: "{{ primary_status.File }}"
-        primary_log_pos: "{{ primary_status.Position | int }}"
+        primary_log_file: "{{ replication_primary_status.File }}"
+        primary_log_pos: "{{ replication_primary_status.Position | int }}"
         primary_delay: 10 # для учебных целей 10 секунд
         fail_on_error: true
 
