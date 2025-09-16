@@ -7,3 +7,4 @@
     - prometheus
     - grafana
     - cadvisor
+    - grafana_config

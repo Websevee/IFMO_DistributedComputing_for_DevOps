@@ -1,0 +1,79 @@
+---
+- name: Wait Helthcheck Grafana
+  uri:
+    url: http://localhost:3000/api/health
+    status_code: 200
+  register: grafana_health
+  until: grafana_health.status == 200
+  retries: 10
+  delay: 5
+
+- name: Create Grafana Service Account
+  uri:
+    url: http://localhost:3000/api/serviceaccounts
+    method: POST
+    user: "{{ grafana_admin_user }}"
+    password: "{{ grafana_admin_password }}"
+    force_basic_auth: yes
+    body_format: json
+    body: |
+      {
+        "name": "ansible-service-account",
+        "role": "Admin"
+      }
+    status_code: 201
+  register: service_account_result
+
+- name: Create API key for Service Account
+  uri:
+    url: "http://localhost:3000/api/serviceaccounts/{{ service_account_result.json.id }}/tokens"
+    method: POST
+    user: "{{ grafana_admin_user }}"
+    password: "{{ grafana_admin_password }}"
+    force_basic_auth: yes
+    body_format: json
+    body: |
+      {
+        "name": "ansible-api-key"
+      }
+    status_code: 200
+  register: api_key_result
+
+- name: Set Grafana API key fact
+  set_fact:
+    grafana_api_key: "{{ api_key_result.json.key }}"
+
+- name: Create Prometheus datasource
+  grafana.grafana.datasource:
+    grafana_url: "http://localhost:3000"
+    grafana_api_key: "{{ grafana_api_key }}"
+    state: present
+    dataSource: |
+      {
+        "uid": "learn-prometheus-uid",
+        "name": "Prometheus",
+        "type": "prometheus",
+        "access": "proxy",
+        "url": "http://prometheus:9090",
+        "isDefault": true,
+        "jsonData": {
+          "httpMethod": "POST",
+          "manageAlerts": true,
+          "prometheusType": "Prometheus",
+          "cacheLevel": "High"
+        }
+      }
+
+- name: Create Grafana Dasboard - 10619 (Docker Container & Host Metrics)
+  grafana.grafana.dashboard:
+    grafana_url: http://localhost:3000
+    grafana_api_key: "{{ grafana_api_key }}"
+    state: present
+    dashboard: "{{ lookup('file', '{{ role_path }}/files/dashboards/10619-dashboard.json') }}"
+
+- name: Create Grafana Dasboard - 19908 (cAdvisor Docker Insights)
+  grafana.grafana.dashboard:
+    grafana_url: http://localhost:3000
+    grafana_api_key: "{{ grafana_api_key }}"
+    state: present
+    dashboard: "{{ lookup('file', '{{ role_path }}//files/dashboards/19908-dashboard.json') }}"
